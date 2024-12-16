@@ -2,7 +2,7 @@ import pandas as pd
 
 def process_txt_file(content, num_fields):
         
-    entries = [line.strip().split('\t') for line in content.split("\n") if line and not line.startswith('#')]
+    entries = [line.strip().strip('"').strip('"').split('\t') for line in content.split("\n") if line and not line.startswith('#')]
 
     # Khởi tạo danh sách để lưu trữ dữ liệu
     formatted_data = []
@@ -17,9 +17,10 @@ def process_txt_file(content, num_fields):
     # Tạo DataFrame
     columns = [f'Field {i+1}' for i in range(num_fields)]
     df = pd.DataFrame(formatted_data, columns=columns)
+    df = add_style(df)
     return df
 
-def add_style(df, field):
+def add_style(df):
     stl = '''<style>
                 div.phrasehead{margin: 2px 0;font-weight: bold;}
                 span.star {color: #FFBB00;}
@@ -33,4 +34,7 @@ def add_style(df, field):
                 li.sent  {margin:0; padding:0;}
                 span.eng_sent {margin-right:5px;}
             </style>'''
-    df[f'{field}'] = stl + df[f'{field}']
+    for field in df.columns:
+        if df[field].str.startswith("<span").any():
+            df[f'{field}'] = stl + df[f'{field}']
+    return df
