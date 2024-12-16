@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from backend import process_txt_file
+from backend import process_txt_file, add_style
 
 # Tiêu đề ứng dụng
 st.title("Chuyển đổi TXT thành CSV và Excel")
@@ -31,26 +31,33 @@ with tabs[0]:
                 # Hiển thị DataFrame
                 st.write("Dữ liệu đã được chuyển đổi thành DataFrame:")
                 st.dataframe(df)
-
-                # Chọn các hàng để xóa
-                rows_to_drop = st.multiselect("Chọn các hàng để xóa", df.index.tolist())
-
-                # Xóa các hàng đã chọn
-                if rows_to_drop:
-                    df = df.drop(rows_to_drop)
-
-                # Tùy chọn tải về
-                download_format = st.selectbox("Chọn định dạng tải về", ["CSV", "Excel"])
-
-                if st.button("Tải về"):
-                    if download_format == "CSV":
-                        csv = df.to_csv(index=False).encode('utf-8')
-                        st.download_button("Tải về CSV", csv, "data.csv", "text/csv")
-                    elif download_format == "Excel":
-                        excel = df.to_excel(index=False, engine='openpyxl')
-                        st.download_button("Tải về Excel", excel, "data.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             except ValueError as e:
                 st.error(f"Đã xảy ra lỗi: {e}. Vui lòng kiểm tra số lượng cột và dữ liệu trong tệp TXT.")
+            # drop = st.checkbox("Drop Columns with NaN")
+            # if drop:
+            #     df.dropna(axis=1, inplace=True)
+            #     st.success("NaN columns have been removed.")
+            #
+            # st.subheader("Select Column to Add Custom Styling")
+            # column_to_style = st.selectbox("Choose a column", df.columns)
+            # if st.button("Apply Style"):
+            #     df = add_style(df, column_to_style)
+            #     st.success(f"Custom styling applied to column: {column_to_style}")
+            # excel = df.to_excel(index=False, engine='openpyxl')
+            # st.download_button("Tải về Excel", excel, "data.xlsx")
+            st.download_button(
+                label="Download data as CSV",
+                data=df.to_csv(index=False).encode('utf-8'),
+                file_name=f"{uploaded_file.name}.csv",
+                mime="text/csv",
+            )
+            # st.download_button(
+            #     label="Download data as excel",
+            #     data=df.to_excel(index=False).encode('utf-8'),
+            #     file_name=f"{uploaded_file.name}.csv",
+            #     mime="text/csv",
+            # )
+
         else:
             st.warning("Vui lòng tải lên tệp TXT trước khi nhấn Convert.")
 

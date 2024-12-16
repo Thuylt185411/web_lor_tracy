@@ -18,3 +18,19 @@ def process_txt_file(content, num_fields):
     columns = [f'Field {i+1}' for i in range(num_fields)]
     df = pd.DataFrame(formatted_data, columns=columns)
     return df
+
+def add_style(df, field):
+    stl = '''<style>
+                div.phrasehead{margin: 2px 0;font-weight: bold;}
+                span.star {color: #FFBB00;}
+                span.pos, span.word-level, span.usage-info  {text-transform:lowercase; font-size:0.9em; margin-right:5px; padding:2px 4px; color:white; border-radius:8px;}
+                span.pos {background-color:#0d47a1;}
+                span.word-level {background-color: #1d2956; text-transform: uppercase;}
+                span.usage-info {background-color: #f4d03f; color: #000;}
+                span.tran {margin:0; padding:0;}
+                span.eng_tran {margin-right:3px; padding:0;}
+                ul.sents {font-size:0.8em; list-style:square inside; margin:3px 0;padding:5px;background:rgba(13, 175, 160, 0.1); border-radius:8px;}
+                li.sent  {margin:0; padding:0;}
+                span.eng_sent {margin-right:5px;}
+            </style>'''
+    df[f'{field}'] = stl + df[f'{field}']
