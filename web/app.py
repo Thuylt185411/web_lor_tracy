@@ -32,6 +32,13 @@ with tabs[0]:
                 st.write("Dữ liệu đã được chuyển đổi thành DataFrame:")
                 st.dataframe(df)
 
+                # Chọn các hàng để xóa
+                rows_to_drop = st.multiselect("Chọn các hàng để xóa", df.index.tolist())
+
+                # Xóa các hàng đã chọn
+                if rows_to_drop:
+                    df = df.drop(rows_to_drop)
+
                 # Tùy chọn tải về
                 download_format = st.selectbox("Chọn định dạng tải về", ["CSV", "Excel"])
 
