@@ -71,7 +71,7 @@ import pandas as pd
 def process_txt_file(content, num_fields):
         
     entries = [line.strip().strip('"').strip('"').split('\t') for line in content.split("\n") if line and not line.startswith('#')]
-
+    entry_1 = []
     # Khởi tạo danh sách để lưu trữ dữ liệu
     formatted_data = []
     for entry in entries:
@@ -104,7 +104,7 @@ def process_txt_file_B1(content, num_fields):
     #     print((len(entry)))
     # Sử dụng zip để kết hợp các mục từ và định nghĩa
     for entry in entries:
-        if entry[0].strip().startswith('Destination B1'):
+        if '::' in entry[0].strip():
             entry_1 = []
             entry_1.extend([x.strip().strip('"').replace('""', '"') for x in entry])
         else:
