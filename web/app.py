@@ -99,91 +99,90 @@ with tabs[1]:
             st.download_button(
                 label="Download data as CSV",
                 data=df.to_csv(index=False).encode('utf-8'),
-                file_name=f"{uploaded_file.name}.csv",
+                file_name=f"{uploaded_file.name.split('.')[0]}.csv",
                 mime="text/csv",
             )
 
         else:
             st.warning("Vui lòng tải lên tệp TXT trước khi nhấn Convert.")
-with tabs[2]:
-    st.header("Tìm kiếm trên YouGlish")
-
-    # Input có thể là text hoặc file CSV
-    search_type = st.radio("Chọn cách tìm kiếm:", ["Nhập từ", "Upload CSV"])
-
-    if search_type == "Nhập từ":
-        search_word = st.text_input("Nhập từ cần tìm", "")
-        words_to_search = [search_word] if search_word else []
-    else:
-        uploaded_file = st.file_uploader("Upload CSV file chứa danh sách từ", type=['csv'])
-        if uploaded_file:
-            df = pd.read_csv(uploaded_file)
-            words_to_search = df.iloc[:, 0].tolist()  # Lấy cột đầu tiên
-            st.write(f"Đã tải lên {len(words_to_search)} từ")
-
-    if st.button("Tìm kiếm"):
-        if words_to_search:
-            all_results = []
-
-            # Progress bar
-            progress_bar = st.progress(0)
-            for i, word in enumerate(words_to_search):
-                try:
-                    with st.spinner(f'Đang tìm kiếm từ "{word}"...'):
-                        result = search_youglish(word)
-                        result['word'] = word
-                        all_results.append(result)
-
-                    # Update progress
-                    progress_bar.progress((i + 1) / len(words_to_search))
-
-                except Exception as e:
-                    st.error(f"Lỗi khi tìm từ '{word}': {str(e)}")
-
-            if all_results:
-                # Tạo DataFrame từ kết quả YouGlish
-                df_youglish = pd.DataFrame(all_results)
-
-                # Join với DataFrame gốc
-                df_merged = pd.merge(
-                    df,
-                    df_youglish,
-                    left_on=df.columns[0],  # Join trên cột đầu tiên của df gốc
-                    right_on='word',
-                    how='left'
-                )
-
-                # Drop cột word (vì đã có trong df gốc)
-                df_merged = df_merged.drop('word', axis=1).dropna(axis=1, how='all')
-
-                # Hiển thị kết quả
-                st.subheader("Kết quả sau khi join")
-                st.dataframe(df_merged)
-
-                # Buttons để download
-                col1, col2 = st.columns(2)
-
-                with col1:
-                    st.download_button(
-                        label="📥 Download CSV",
-                        data=df_merged.to_csv(index=False).encode('utf-8'),
-                        file_name="merged_results.csv",
-                        mime="text/csv",
-                    )
-
-
-                # Preview videos
-                st.subheader("Preview Videos")
-                for result in all_results:
-                    video_url = f"https://youtube.com/watch?v={result['video_id']}&t={result['start_second']}"
-                    st.write(f"### Results for '{result['word']}'")
-                    st.write(f"**{result['video_title']}**")
-                    st.write(f"🎯 Câu ví dụ: {result['cloze_sentence']}")
-                    st.write(f"⏱ Thời gian: {result['start_second']}s - {result['end_second']}s")
-                    st.write(f"🔗 [Xem trên YouTube]({video_url})")
-                    st.write("---")
-
-            else:
-                st.warning("Không tìm thấy kết quả nào.")
-        else:
-            st.warning("Vui lòng nhập từ hoặc upload file CSV.")
+# with tabs[2]:
+#     st.header("Tìm kiếm trên YouGlish")
+#
+#     # Input có thể là text hoặc file CSV
+#     search_type = st.radio("Chọn cách tìm kiếm:", ["Nhập từ", "Upload CSV"])
+#
+#     if search_type == "Nhập từ":
+#         search_word = st.text_input("Nhập từ cần tìm", "")
+#         words_to_search = [search_word] if search_word else []
+#     else:
+#         uploaded_file = st.file_uploader("Upload CSV file chứa danh sách từ", type=['csv'])
+#         if uploaded_file:
+#             df = pd.read_csv(uploaded_file)
+#             words_to_search = df.iloc[:, 1].tolist()
+#             st.write(f"Đã tải lên {len(words_to_search)} từ")
+#
+#     if st.button("Tìm kiếm"):
+#         if words_to_search:
+#             all_results = []
+#
+#             # Progress bar
+#             progress_bar = st.progress(0)
+#             for i, word in enumerate(words_to_search):
+#                 try:
+#                     with st.spinner(f'Đang tìm kiếm từ "{word}"...'):
+#                         result = search_youglish(word)
+#                         result['word'] = word
+#                         all_results.append(result)
+#
+#                     # Update progress
+#                     progress_bar.progress((i + 1) / len(words_to_search))
+#
+#                 except Exception as e:
+#                     st.error(f"Lỗi khi tìm từ '{word}': {str(e)}")
+#
+#             if all_results:
+#                 # Tạo DataFrame từ kết quả YouGlish
+#                 df_youglish = pd.DataFrame(all_results)
+#
+#                 # Join với DataFrame gốc
+#                 df_merged = pd.merge(
+#                     df,
+#                     df_youglish,
+#                     on='word',
+#                     how='left'
+#                 )
+#
+#                 # Drop cột word (vì đã có trong df gốc)
+#                 df_merged = df_merged.drop('word', axis=1).dropna(axis=1, how='all')
+#
+#                 # Hiển thị kết quả
+#                 st.subheader("Kết quả sau khi join")
+#                 st.dataframe(df_merged)
+#
+#                 # Buttons để download
+#                 col1, col2 = st.columns(2)
+#
+#                 with col1:
+#                     st.download_button(
+#                         label="📥 Download CSV",
+#                         data=df_merged.to_csv(index=False).encode('utf-8'),
+#                         file_name="merged_results.csv",
+#                         mime="text/csv",
+#                     )
+#
+#
+#                 # Preview videos
+#                 st.subheader("Preview Videos")
+#                 for result in all_results:
+#                     video_url = f"https://youtube.com/watch?v={result['video_id']}&t={result['start_second']}"
+#                     st.write(f"### Results for '{result['word']}'")
+#                     st.write(f"**{result['video_title']}**")
+#                     st.write(f"🎯 Câu ví dụ: {result['cloze_sentence']}")
+#                     st.write(f"⏱ Thời gian: {result['start_second']}s - {result['end_second']}s")
+#                     st.write(f"🔗 [Xem trên YouTube]({video_url})")
+#                     st.write("---")
+#
+#             else:
+#                 st.warning("Không tìm thấy kết quả nào.")
+#         else:
+#             st.warning("Vui lòng nhập từ hoặc upload file CSV.")

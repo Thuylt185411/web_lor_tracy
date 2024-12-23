@@ -97,22 +97,24 @@ def process_txt_file(content, num_fields):
 
 
 def process_txt_file_B1(content, num_fields):
-    entries = [line.strip('"').strip('"').split('\t') for line in content.split("\n") if
-               line and not line.startswith('#')]
+    entries = [line.strip('"').strip('"').split('\t') for line in content.split("\n") if line and not line.startswith('#')]
 
-    # Khởi tạo danh sách để lưu trữ dữ liệu
-    # formatted_data = []
-    #
-    # # Sử dụng zip để kết hợp các mục từ và định nghĩa
-    # for entry in zip(entries[::2], entries[1::2]):
-    #     entry_1 = []
-    #     entry_1.extend(entry[0])  # Mục từ
-    #     entry_1.extend(entry[1])  # Mục định nghĩa
-    #     formatted_data.append(entry_1)  # Thêm vào danh sách kết quả
+    formatted_data = []
+    # for entry in entries:
+    #     print((len(entry)))
+    # Sử dụng zip để kết hợp các mục từ và định nghĩa
+    for entry in entries:
+        if entry[0].strip().startswith('Destination B1'):
+            entry_1 = []
+            entry_1.extend([x.strip().strip('"').replace('""', '"') for x in entry])
+        else:
+            entry_1.extend([x.strip().strip('"') for x in entry])
+        formatted_data.append(entry_1)
 
     # Tạo DataFrame
-    columns = [f'Field {i + 1}' for i in range(num_fields)]
-    df = pd.DataFrame(entries, columns=columns)
+    columns = ['Deck', 'word']
+    columns.extend(f'Field {i + 1}' for i in range(num_fields - 2))
+    df = pd.DataFrame(formatted_data, columns=columns).drop_duplicates()
     df = add_style(df)
     return df
 
