@@ -1,73 +1,73 @@
 import pandas as pd
-# from selenium import webdriver
-# from selenium.webdriver.chrome.options import Options
-# from selenium.webdriver.common.by import By
-# from bs4 import BeautifulSoup
-# import time
-# import random
-# from fake_useragent import UserAgent
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from bs4 import BeautifulSoup
+import time
+import random
+from fake_useragent import UserAgent
 
 
-# def search_youglish(word):
-#     # Thiết lập Chrome options
-#     ua = UserAgent()
-#     user_agent = ua.random
-#
-#     chrome_options = Options()
-#     chrome_options.add_argument('--disable-gpu')  # Tắt GPU acceleration
-#     chrome_options.add_argument('--disable-software-rasterizer')
-#     chrome_options.add_argument("--headless=new")
-#     chrome_options.add_argument("--disable-notifications")
-#     chrome_options.add_argument("--disable-popup-blocking")
-#     chrome_options.add_argument("--disable-infobars")
-#     chrome_options.add_argument("--disable-extensions")
-#     chrome_options.add_argument(f'user-agent={user_agent}')
-#     word = ('%20').join(word.split(' ')).replace('(','').replace(')','').split('/')[0]
-#     browser = webdriver.Chrome(options=chrome_options)
-#     print(word)
-#     browser.get(f"https://youglish.com/pronounce/{word}/english")
-#
-#     # Đợi và click nút View All
-#     time.sleep(random.uniform(5, 10))
-#     button_viewall = browser.find_element(By.CLASS_NAME, "togglecaps")
-#     button_viewall.click()
-#     time.sleep(random.uniform(10, 13))
-#     source_code = browser.page_source
-#     soup = BeautifulSoup(source_code, 'html.parser')
-#     video_info = soup.find('iframe', id='player')
-#     video_id = video_info.get('src').split('?')[0].split('/')[-1]
-#     video_title = video_info.get('title')
-#
-#     # Lấy caption và xử lý highlight
-#     caption = soup.find('div', id='r_caption')
-#     if caption:
-#         caption1 = (' ').join([cap.get_text() for cap in caption.findAll('span', class_='marker lg_0')])
-#         caption_raw = caption.get_text()
-#         if caption1 in caption_raw:
-#             print(caption1)
-#             cloze_sentence = caption.get_text().replace(caption1, f'<b>{caption1}</b>')
-#             # print(cloze_sentence)
-#         else:
-#             for cap in caption.findAll('span', class_='marker lg_0'):
-#                 cap = cap.get_text()
-#                 cloze_sentence = caption_raw.replace(cap, f'<b>{cap}</b>')
-#                 caption_raw = cloze_sentence
-#
-#     ac_current_cap = soup.find('li', class_='ac_current_cap')
-#     if ac_current_cap:
-#         id_current = int(ac_current_cap.get('id').split('_')[-1])
-#         start_second = soup.find('li', id=f'ac_{id_current}').get('data-start')
-#         next_cap = soup.find('li', id=f'ac_{str(id_current + 1)}')
-#         end_second = next_cap.get('data-start') if next_cap else None
-#     browser.quit()
-#
-#     return {
-#         'video_id': video_id,
-#         'video_title': video_title,
-#         'cloze_sentence': cloze_sentence,
-#         'start_second': start_second,
-#         'end_second': end_second
-#     }
+def search_youglish(word):
+    # Thiết lập Chrome options
+    ua = UserAgent()
+    user_agent = ua.random
+
+    chrome_options = Options()
+    chrome_options.add_argument('--disable-gpu')  # Tắt GPU acceleration
+    chrome_options.add_argument('--disable-software-rasterizer')
+    chrome_options.add_argument("--headless=new")
+    chrome_options.add_argument("--disable-notifications")
+    chrome_options.add_argument("--disable-popup-blocking")
+    chrome_options.add_argument("--disable-infobars")
+    chrome_options.add_argument("--disable-extensions")
+    chrome_options.add_argument(f'user-agent={user_agent}')
+    word = ('%20').join(word.split(' ')).replace('(','').replace(')','').split('/')[0]
+    browser = webdriver.Chrome(options=chrome_options)
+    print(word)
+    browser.get(f"https://youglish.com/pronounce/{word}/english")
+
+    # Đợi và click nút View All
+    time.sleep(random.uniform(5, 10))
+    button_viewall = browser.find_element(By.CLASS_NAME, "togglecaps")
+    button_viewall.click()
+    time.sleep(random.uniform(10, 13))
+    source_code = browser.page_source
+    soup = BeautifulSoup(source_code, 'html.parser')
+    video_info = soup.find('iframe', id='player')
+    video_id = video_info.get('src').split('?')[0].split('/')[-1]
+    video_title = video_info.get('title')
+
+    # Lấy caption và xử lý highlight
+    caption = soup.find('div', id='r_caption')
+    if caption:
+        caption1 = (' ').join([cap.get_text() for cap in caption.findAll('span', class_='marker lg_0')])
+        caption_raw = caption.get_text()
+        if caption1 in caption_raw:
+            print(caption1)
+            cloze_sentence = caption.get_text().replace(caption1, f'<b>{caption1}</b>')
+            # print(cloze_sentence)
+        else:
+            for cap in caption.findAll('span', class_='marker lg_0'):
+                cap = cap.get_text()
+                cloze_sentence = caption_raw.replace(cap, f'<b>{cap}</b>')
+                caption_raw = cloze_sentence
+
+    ac_current_cap = soup.find('li', class_='ac_current_cap')
+    if ac_current_cap:
+        id_current = int(ac_current_cap.get('id').split('_')[-1])
+        start_second = int(soup.find('li', id=f'ac_{id_current}').get('data-start')) - 2
+        next_cap = soup.find('li', id=f'ac_{str(id_current + 1)}')
+        end_second = int(next_cap.get('data-start')) +2 if next_cap else None
+    browser.quit()
+
+    return {
+        'video_id': video_id,
+        'video_title': video_title,
+        'cloze_sentence': cloze_sentence,
+        'start_second': start_second,
+        'end_second': end_second
+    }
 def process_txt_file(content, num_fields):
         
     entries = [line.strip().strip('"').strip('"').split('\t') for line in content.split("\n") if line and not line.startswith('#')]
@@ -103,6 +103,7 @@ def process_txt_file_B1(content, num_fields):
     # for entry in entries:
     #     print((len(entry)))
     # Sử dụng zip để kết hợp các mục từ và định nghĩa
+    entry_1 = []
     for entry in entries:
         if '::' in entry[0].strip():
             entry_1 = []
