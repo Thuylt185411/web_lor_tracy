@@ -1,188 +1,322 @@
 import streamlit as st
 import pandas as pd
+from backend import process_txt_file, add_style, process_txt_file_B1, find_id
+import PyPDF2
 import io
-from backend import process_txt_file, add_style, process_txt_file_B1
 
+def main():
+    """Main function for the Streamlit application."""
+    st.title("TXT to CSV/Excel Converter")
 
-# Tiêu đề ứng dụng
-st.title("Chuyển đổi TXT thành CSV và Excel")
+    tabs = st.tabs(["TXT to CSV/Excel", "B1", "YouGlish Search", "PDF Tools"])
+    
+    # Khởi tạo df là None thay vì list rỗng
+    df = None
 
-# Tạo các tab
-tabs = st.tabs(["TXT to CSV/Excel","B1", "YouGlish Search", "Style Options"])
-df = []
-# Tab đầu tiên: TXT to CSV
-with tabs[0]:
-    st.header("Chuyển đổi TXT thành CSV")
-    # Tải lên tệp TXT
-    uploaded_file = st.file_uploader("Chọn tệp TXT", type=["txt"], key="txt_uploader")
-    num_fields = st.number_input("Nhập số trường cần có (hoặc để auto)", min_value=1, value=8)
-    df = pd.DataFrame({})
-    # Nút Convert
+    with tabs[0]:
+        handle_txt_to_csv_tab()
+
+    with tabs[1]:
+        handle_b1_tab()
+
+    with tabs[2]:
+        handle_youglish_tab()
+
+    with tabs[3]:
+        handle_pdf_tab()
+
+def handle_txt_to_csv_tab():
+    """Handle the TXT to CSV conversion tab."""
+    st.header("Convert TXT to CSV")
+    uploaded_file = st.file_uploader(
+        "Choose TXT file",
+        type=["txt"],
+        key="txt_uploader"
+    )
+    num_fields = st.number_input(
+        "Enter number of fields (or auto)",
+        min_value=1,
+        value=8
+    )
+    
     if st.button("Convert"):
-        if uploaded_file is not None:
-            # Đọc nội dung tệp TXT
+        process_txt_file_upload(uploaded_file, num_fields)
+
+def process_txt_file_upload(uploaded_file, num_fields):
+    """Process uploaded TXT file and convert to DataFrame."""
+    if uploaded_file is None:
+        st.warning("Please upload a TXT file before converting.")
+        return
+
+    try:
+        content = uploaded_file.read().decode("utf-8")
+        df = process_txt_file(content, num_fields).dropna(axis=1, how='all')
+        
+        st.write(f"Data will have {len(df.columns)} columns.")
+        st.dataframe(df)
+        
+        create_download_button(df, uploaded_file.name)
+    except ValueError as e:
+        st.error(f"Error occurred: {e}. Please check the column count and data.")
+
+def create_download_button(df, original_filename):
+    """Create a download button for the DataFrame."""
+    st.download_button(
+        label="Download data as CSV",
+        data=df.to_csv(index=False).encode('utf-8'),
+        file_name=f"{original_filename.split('.')[0]}.csv",
+        mime="text/csv",
+    )
+
+def handle_b1_tab():
+    """Handle the B1 tab functionality."""
+    st.header("B1 File Processing")
+    
+    uploaded_file = st.file_uploader(
+        "Choose TXT file",
+        type=["txt"],
+        key="b1_txt_uploader"
+    )
+    
+    if st.button("Process B1", key="process_b1_button"):
+        if uploaded_file is None:
+            st.warning("Please upload a TXT file before processing.")
+            return
+            
+        try:
             content = uploaded_file.read().decode("utf-8")
-
-            try:
-            # Xử lý tệp TXT và tạo DataFrame
-                df = process_txt_file(content, num_fields).dropna(axis=1, how='all')
-
-                # Hiển thị số lượng cột
-                st.write(f"Dữ liệu sẽ có {len(df.columns)} cột.")
-
-                # Hiển thị DataFrame
-                st.write("Dữ liệu đã được chuyển đổi thành DataFrame:")
+            df = process_txt_file_B1(content)
+            
+            if df is not None and not df.empty:
+                st.write("Processed Data:")
                 st.dataframe(df)
-            except ValueError as e:
-                st.error(f"Đã xảy ra lỗi: {e}. Vui lòng kiểm tra số lượng cột và dữ liệu trong tệp TXT.")
-            # style_new = st.text_input("Style", "Type")
-            # st.write("The current style", style_new)
-            # if style_new:
-            #     df = add_style(df, style_new)
-            #     st.dataframe(df)
-            # else:
-            #     df = add_style(df)
-            #     st.dataframe(df)
-            # drop = st.checkbox("Drop Columns with NaN")
-            # if drop:
-            #     df.dropna(axis=1, inplace=True)
-            #     st.success("NaN columns have been removed.")
-            #
-            # st.subheader("Select Column to Add Custom Styling")
-            # column_to_style = st.selectbox("Choose a column", df.columns)
-            # if st.button("Apply Style"):
-            #     df = add_style(df, column_to_style)
-            #     st.success(f"Custom styling applied to column: {column_to_style}")
-            # excel = df.to_excel(index=False, engine='openpyxl')
-            # st.download_button("Tải về Excel", excel, "data.xlsx")
-            st.download_button(
-                label="Download data as CSV",
-                data=df.to_csv(index=False).encode('utf-8'),
-                file_name=f"{uploaded_file.name.split('.')[0]}.csv",
-                mime="text/csv",
+                
+                # Tạo nút download
+                st.download_button(
+                    label="Download B1 data as CSV",
+                    data=df.to_csv(index=False).encode('utf-8'),
+                    file_name=f"B1_{uploaded_file.name.split('.')[0]}.csv",
+                    mime="text/csv",
+                )
+            else:
+                st.warning("No data was processed. Please check your input file.")
+                
+        except Exception as e:
+            st.error(f"Error processing file: {str(e)}")
+def handle_youglish_tab():
+    """Handle YouGlish search with multiple input methods."""
+    st.header("YouGlish Search & Word Lookup")
+    
+    search_col, result_col = st.columns([1, 2])
+    
+    with search_col:
+        # Chọn phương thức input
+        input_method = st.radio(
+            "Choose input method:",
+            ["Single Word", "Multiple Words", "Upload CSV"],
+            key="input_method"
+        )
+        
+        words_to_search = []
+        
+        if input_method == "Single Word":
+            word = st.text_input(
+                "Enter a word to search:",
+                key="single_word"
             )
-            # st.download_button(
-            #     label="Download data as excel",
-            #     data=df.to_excel(index=False).encode('utf-8'),
-            #     file_name=f"{uploaded_file.name}.csv",
-            #     mime="text/csv",
-            # )
-
-        else:
-            st.warning("Vui lòng tải lên tệp TXT trước khi nhấn Convert.")
-with tabs[1]:
-    st.header("B1")
-
-    # Tải lên tệp TXT
-    uploaded_file = st.file_uploader("Chọn tệp TXT", type=["txt"], key="txt_uploader_b1")
-    num_fields = st.number_input("Nhập số trường cần có (hoặc để auto)", min_value=1, value=8, key="b1")
-
-    # Nút Convert
-    if st.button("Convert", key='convert_b1'):
-        if uploaded_file is not None:
-            # Đọc nội dung tệp TXT
-            content = uploaded_file.read().decode("utf-8")
-            df = []
+            if word:
+                words_to_search = [word.strip()]
+                
+        elif input_method == "Multiple Words":
+            text_input = st.text_area(
+                "Enter words (one per line):",
+                height=150,
+                key="multiple_words",
+                help="Enter one word per line"
+            )
+            if text_input:
+                words_to_search = [word.strip() for word in text_input.splitlines() if word.strip()]
+                
+        else:  # Upload CSV
+            uploaded_file = st.file_uploader(
+                "Upload CSV file",
+                type=['csv'],
+                key="csv_uploader",
+                help="CSV file should have a column named 'words' or 'word'"
+            )
+            
+            if uploaded_file:
+                try:
+                    df = pd.read_csv(uploaded_file)
+                    if 'words' in df.columns:
+                        words_to_search = df['words'].dropna().tolist()
+                        st.success(f"Loaded {len(words_to_search)} words from CSV")
+                    elif 'word' in df.columns:
+                        words_to_search = df['word'].dropna().tolist()
+                        st.success(f"Loaded {len(words_to_search)} words from CSV")
+                    else:
+                        st.error("CSV must contain a column named 'words' or 'word'")
+                except Exception as e:
+                    st.error(f"Error reading CSV: {str(e)}")
+        
+        # Hiển thị số lượng từ sẽ tìm kiếm
+        if words_to_search:
+            st.write(f"Words to search: {len(words_to_search)}")
+        
+        # Nút tìm kiếm
+        if st.button("Search", key="search_button", disabled=not words_to_search):
             try:
-                # Xử lý tệp TXT và tạo DataFrame
-                df = process_txt_file_B1(content, num_fields)
+                with st.spinner('Searching...'):
+                    results = find_id(words_to_search)
+                
+                if not results.empty:
+                    st.session_state.search_results = results
+                    st.success(f"Found {len(results)} results!")
+                else:
+                    st.warning("No matches found.")
+                    st.session_state.search_results = None
+                    
+            except Exception as e:
+                st.error(f"Error during search: {str(e)}")
+                st.session_state.search_results = None
+    
+    with result_col:
+        if 'search_results' in st.session_state and st.session_state.search_results is not None:
+            results = st.session_state.search_results
+            merge_col = 'word' if 'word' in results.columns else 'words'
+            results = df.merge(results, on=merge_col, how='left')
 
-                # Hiển thị số lượng cột
-                st.write(f"Dữ liệu sẽ có {len(df.columns)} cột.")
+            
+            # Display results in a dataframe
+            st.dataframe(results)
+            
+            # Display YouTube videos for each result
+            # Only show first 2 results
+            for _, row in results.head(2).iterrows():
+                if pd.notna(row['video_id']):
+                    st.write(f"**Word:** {row['word']}")
+                    st.write(f"**Caption:** {row['caption']}")
+                    
+                    start_second = 0 if pd.isna(row['start_second']) else int(row['start_second'])
+                    end_second = 10 if pd.isna(row['end_second']) else int(row['end_second'])
+                    
+                    video_url = f"https://www.youtube.com/embed/{row['video_id']}?start={start_second}&end={end_second}&autoplay=1&cc_load_policy=1"
+                    
+                    # Add reload button for each video
+                    st.components.v1.iframe(video_url, width=400, height=300)
+                    st.markdown("---")
+            
+            # Tạo DataFrame để download
+            if st.button("Download Results as CSV"):
+                csv = convert_results_to_csv(results)
+                st.download_button(
+                    label="Click to Download",
+                    data=csv,
+                    file_name="youglish_results.csv",
+                    mime="text/csv"
+                )
 
-                # Hiển thị DataFrame
-                st.write("Dữ liệu đã được chuyển đổi thành DataFrame:")
-                st.dataframe(df)
-            except ValueError as e:
-                st.error(f"Đã xảy ra lỗi: {e}. Vui lòng kiểm tra số lượng cột và dữ liệu trong tệp TXT.")
+def convert_results_to_csv(results: pd.DataFrame) -> str:
+    """Convert results to CSV format."""
+    # Chọn và sắp xếp lại các cột cho CSV
+    csv_df = results[[
+        'word', 'video_title', 'caption', 
+        'start_second', 'end_second', 'video_id'
+    ]]
+    return csv_df.to_csv(index=False).encode('utf-8')
+        
+def handle_pdf_tab():
+    """Handle PDF processing functionality."""
+    st.header("PDF Tools")
+    
+    uploaded_files = st.file_uploader(
+        "Choose PDF files",
+        type=["pdf"],
+        key="pdf_uploader",
+        accept_multiple_files=True
+    )
+    
+    if uploaded_files:
+        try:
+            # Create lists to store PDF info
+            pdf_files = []
+            page_counts = []
+            
+            # Load PDFs and get page counts
+            for uploaded_file in uploaded_files:
+                pdf_bytes = io.BytesIO(uploaded_file.read())
+                pdf_reader = PyPDF2.PdfReader(pdf_bytes)
+                pdf_files.append({
+                    'name': uploaded_file.name,
+                    'bytes': pdf_bytes,
+                    'pages': len(pdf_reader.pages)
+                })
+                page_counts.append(len(pdf_reader.pages))
+            
+            # Display PDF order selection
+            st.subheader("Arrange PDF Order")
+            pdf_order = []
+            for i, pdf in enumerate(pdf_files):
+                order = st.number_input(
+                    f"Order for {pdf['name']} ({pdf['pages']} pages)",
+                    min_value=1,
+                    max_value=len(pdf_files),
+                    value=i+1,
+                    key=f"order_{i}"
+                )
+                pdf_order.append((order-1, pdf))
+            
+            # Sort PDFs by selected order
+            pdf_order.sort(key=lambda x: x[0])
+            ordered_pdfs = [item[1] for item in pdf_order]
+            
+            if st.button("Merge PDFs"):
+                # Create merger with ordered PDFs
+                merger = PyPDF2.PdfMerger()
+                for pdf in ordered_pdfs:
+                    pdf['bytes'].seek(0)
+                    merger.append(pdf['bytes'])
+                
+                # Create merged PDF
+                merged_pdf = io.BytesIO()
+                merger.write(merged_pdf)
+                merged_pdf.seek(0)
+                
+                # Preview merged PDF
+                pdf_reader = PyPDF2.PdfReader(merged_pdf)
+                num_pages = len(pdf_reader.pages)
+                
+                st.write(f"Merged PDF - Total pages: {num_pages}")
+                
+                # Allow viewing merged PDF pages
+                page_number = st.number_input(
+                    "Select page to preview:",
+                    min_value=1,
+                    max_value=num_pages,
+                    value=1
+                )
+                
+                if st.button("Preview Page"):
+                    page = pdf_reader.pages[page_number - 1]
+                    text_content = page.extract_text()
+                    st.text_area(
+                        "Page Content:",
+                        value=text_content,
+                        height=300
+                    )
+                
+                # Download button for merged PDF
+                st.download_button(
+                    "Download Merged PDF",
+                    data=merged_pdf.getvalue(),
+                    file_name="merged.pdf",
+                    mime="application/pdf"
+                )
+                    
+        except Exception as e:
+            st.error(f"Error processing PDFs: {str(e)}")
 
-            st.download_button(
-                label="Download data as CSV",
-                data=df.to_csv(index=False).encode('utf-8'),
-                file_name=f"{uploaded_file.name.split('.')[0]}.csv",
-                mime="text/csv",
-            )
+if __name__ == "__main__":
+    main()
 
-        else:
-            st.warning("Vui lòng tải lên tệp TXT trước khi nhấn Convert.")
-# with tabs[2]:
-#     st.header("Tìm kiếm trên YouGlish")
-#
-#     # Input có thể là text hoặc file CSV
-#     search_type = st.radio("Chọn cách tìm kiếm:", ["Nhập từ", "Upload CSV"])
-#
-#     if search_type == "Nhập từ":
-#         search_word = st.text_input("Nhập từ cần tìm", "")
-#         words_to_search = [search_word] if search_word else []
-#     else:
-#         uploaded_file = st.file_uploader("Upload CSV file chứa danh sách từ", type=['csv'])
-#         if uploaded_file:
-#             df = pd.read_csv(uploaded_file)
-#             words_to_search = df.iloc[:, 1].tolist()
-#             st.write(f"Đã tải lên {len(words_to_search)} từ")
-#
-#     if st.button("Tìm kiếm"):
-#         if words_to_search:
-#             all_results = []
-#
-#             # Progress bar
-#             progress_bar = st.progress(0)
-#             for i, word in enumerate(words_to_search):
-#                 try:
-#                     with st.spinner(f'Đang tìm kiếm từ "{word}"...'):
-#                         result = search_youglish(word)
-#                         result['word'] = word
-#                         all_results.append(result)
-#
-#                     # Update progress
-#                     progress_bar.progress((i + 1) / len(words_to_search))
-#
-#                 except Exception as e:
-#                     st.error(f"Lỗi khi tìm từ '{word}': {str(e)}")
-#
-#             if all_results:
-#                 # Tạo DataFrame từ kết quả YouGlish
-#                 df_youglish = pd.DataFrame(all_results)
-#
-#                 # Join với DataFrame gốc
-#                 df_merged = pd.merge(
-#                     df,
-#                     df_youglish,
-#                     on='word',
-#                     how='left'
-#                 )
-#
-#                 # Drop cột word (vì đã có trong df gốc)
-#                 df_merged = df_merged.drop('word', axis=1).dropna(axis=1, how='all')
-#
-#                 # Hiển thị kết quả
-#                 st.subheader("Kết quả sau khi join")
-#                 st.dataframe(df_merged)
-#
-#                 # Buttons để download
-#                 col1, col2 = st.columns(2)
-#
-#                 with col1:
-#                     st.download_button(
-#                         label="📥 Download CSV",
-#                         data=df_merged.to_csv(index=False).encode('utf-8'),
-#                         file_name="merged_results.csv",
-#                         mime="text/csv",
-#                     )
-#
-#
-#                 # Preview videos
-#                 st.subheader("Preview Videos")
-#                 for result in all_results:
-#                     video_url = f"https://youtube.com/watch?v={result['video_id']}&t={result['start_second']}"
-#                     st.write(f"### Results for '{result['word']}'")
-#                     st.write(f"**{result['video_title']}**")
-#                     st.write(f"🎯 Câu ví dụ: {result['cloze_sentence']}")
-#                     st.write(f"⏱ Thời gian: {result['start_second']}s - {result['end_second']}s")
-#                     st.write(f"🔗 [Xem trên YouTube]({video_url})")
-#                     st.write("---")
-#
-#             else:
-#                 st.warning("Không tìm thấy kết quả nào.")
-#         else:
-#             st.warning("Vui lòng nhập từ hoặc upload file CSV.")
+    

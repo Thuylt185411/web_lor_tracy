@@ -1,73 +1,87 @@
 import pandas as pd
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from bs4 import BeautifulSoup
-import time
-import random
-from fake_useragent import UserAgent
+import redis
+import re
 
 
-def search_youglish(word):
-    # Thiết lập Chrome options
-    ua = UserAgent()
-    user_agent = ua.random
 
-    chrome_options = Options()
-    chrome_options.add_argument('--disable-gpu')  # Tắt GPU acceleration
-    chrome_options.add_argument('--disable-software-rasterizer')
-    chrome_options.add_argument("--headless=new")
-    chrome_options.add_argument("--disable-notifications")
-    chrome_options.add_argument("--disable-popup-blocking")
-    chrome_options.add_argument("--disable-infobars")
-    chrome_options.add_argument("--disable-extensions")
-    chrome_options.add_argument(f'user-agent={user_agent}')
-    word = ('%20').join(word.split(' ')).replace('(','').replace(')','').split('/')[0]
-    browser = webdriver.Chrome(options=chrome_options)
-    print(word)
-    browser.get(f"https://youglish.com/pronounce/{word}/english")
 
-    # Đợi và click nút View All
-    time.sleep(random.uniform(5, 10))
-    button_viewall = browser.find_element(By.CLASS_NAME, "togglecaps")
-    button_viewall.click()
-    time.sleep(random.uniform(10, 13))
-    source_code = browser.page_source
-    soup = BeautifulSoup(source_code, 'html.parser')
-    video_info = soup.find('iframe', id='player')
-    video_id = video_info.get('src').split('?')[0].split('/')[-1]
-    video_title = video_info.get('title')
+def get_df_from_redis(key: str, redis_client: redis.Redis) -> pd.DataFrame | None:
+    """
+    Retrieve DataFrame from Redis by key.
+    
+    Args:
+        key: Redis key to retrieve data
+        redis_client: Redis client instance
+    
+    Returns:
+        DataFrame if data exists, None otherwise
+    """
+    
+    json_data = redis_client.get(key)
+    if json_data is not None:
+        return pd.read_json(json_data, orient='records')
+    return None
+    
 
-    # Lấy caption và xử lý highlight
-    caption = soup.find('div', id='r_caption')
-    if caption:
-        caption1 = (' ').join([cap.get_text() for cap in caption.findAll('span', class_='marker lg_0')])
-        caption_raw = caption.get_text()
-        if caption1 in caption_raw:
-            print(caption1)
-            cloze_sentence = caption.get_text().replace(caption1, f'<b>{caption1}</b>')
-            # print(cloze_sentence)
-        else:
-            for cap in caption.findAll('span', class_='marker lg_0'):
-                cap = cap.get_text()
-                cloze_sentence = caption_raw.replace(cap, f'<b>{cap}</b>')
-                caption_raw = cloze_sentence
+def search_words_in_df(phrases: str | list, df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Search phrases in DataFrame and return one random result for each phrase.
+    
+    Args:
+        phrases: Single phrase or list of phrases to search
+        df: DataFrame containing the captions
+    
+    Returns:
+        DataFrame with random matches including search words
+    """
+    if df is None or df.empty:
+        return pd.DataFrame()
+        
+    if not isinstance(phrases, list):
+        phrases = [phrases]
+        
+    results = []
+    for phrase in phrases:
+        pattern = create_search_pattern(phrase)
+        matches = df[df['caption'].str.contains(
+            pattern, 
+            case=False, 
+            na=False, 
+            regex=True
+        )]
+        
+        if not matches.empty:
+            random_match = matches.sample(n=1)[
+                ['video_id', 'video_title', 'start_second', 'end_second', 'caption']
+            ]
+            random_match['word'] = phrase
+            results.append(random_match)
+    
+    return pd.concat(results).reset_index(drop=True) if results else pd.DataFrame()
 
-    ac_current_cap = soup.find('li', class_='ac_current_cap')
-    if ac_current_cap:
-        id_current = int(ac_current_cap.get('id').split('_')[-1])
-        start_second = int(soup.find('li', id=f'ac_{id_current}').get('data-start')) - 2
-        next_cap = soup.find('li', id=f'ac_{str(id_current + 1)}')
-        end_second = int(next_cap.get('data-start')) +2 if next_cap else None
-    browser.quit()
+def create_search_pattern(phrase: str) -> str:
+    """Create regex pattern for word boundary search."""
+    words = phrase.split()
+    if len(words) > 1:
+        return r'\b' + r'\s+'.join(map(re.escape, words)) + r'\b'
+    return fr'\b{re.escape(phrase)}\b'
 
-    return {
-        'video_id': video_id,
-        'video_title': video_title,
-        'cloze_sentence': cloze_sentence,
-        'start_second': start_second,
-        'end_second': end_second
-    }
+# Initialize Redis client
+REDIS_CONFIG = {
+    'host': 'redis-11993.c228.us-central1-1.gce.redns.redis-cloud.com',
+    'port': 11993,
+    'decode_responses': True,
+    'username': "default",
+    'password': "ObIEQ5XPlF8xNDac7U7yiN6gtBUFVVUp",
+}
+
+redis_client = redis.Redis(**REDIS_CONFIG)
+df = get_df_from_redis('youglish_data', redis_client)
+
+def find_id(words: str | list, dataframe: pd.DataFrame = df) -> pd.DataFrame:
+    """Wrapper function for search_words_in_df."""
+    return search_words_in_df(words, df=dataframe)
+
 def process_txt_file(content, num_fields):
         
     entries = [line.strip().strip('"').strip('"').split('\t') for line in content.split("\n") if line and not line.startswith('#')]
@@ -139,3 +153,8 @@ def add_style(df, style = None):
         if df[field].str.startswith("<span").any():
             df[f'{field}'] = stl + df[f'{field}']
     return df
+
+
+
+
+
