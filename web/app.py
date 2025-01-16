@@ -250,7 +250,7 @@ def handle_youglish_tab():
                 results = df.merge(results, on=merge_col, how='left')
             
             successful_searches = results.dropna(subset=['video_id'])
-            failed_searches = results[results['video_id'].isna()]
+            failed_searches = results[results['video_id'].isna()].drop(['video_id','video_title','start_second','end_second','caption'], axis=1)#axis=1 là cột
             
             if merge_col != 'word':
                 failed_searches = failed_searches.rename(columns={merge_col: 'word'})
