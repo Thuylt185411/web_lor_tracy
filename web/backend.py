@@ -12,13 +12,11 @@ redis_client = redis.Redis(
     decode_responses=True,
     ssl=True
 )
-# Test the connection
 redis_client.ping()
-# Initialize Redis client
 
 # redis_client = redis.Redis(**REDIS_CONFIG)
 
-
+print(redis_client.ping())
 def get_df_from_redis(key: str, redis_client: redis.Redis) -> pd.DataFrame | None:
     """
     Retrieve DataFrame from Redis by key.
