@@ -35,7 +35,7 @@ import streamlit as st
     
 # df = get_df_from_redis('youglish_data', redis_client)
 
-df = pd.read_csv('.\youglish_data.csv')
+df = pd.read_csv('youglish_data.csv')
 
 def search_words_in_df(phrases: str | list, df: pd.DataFrame) -> pd.DataFrame:
     """
