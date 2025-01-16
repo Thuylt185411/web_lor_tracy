@@ -1,8 +1,22 @@
 import pandas as pd
 import redis
 import re
+import streamlit as st
 
 
+    # Redis Cloud connection
+redis_client = redis.Redis(
+    host='redis-11993.c228.us-central1-1.gce.redns.redis-cloud.com',
+    port=11993,
+    password=st.secrets["redis"]["REDIS_PASSWORD"],
+    decode_responses=True,
+    ssl=True
+)
+# Test the connection
+redis_client.ping()
+# Initialize Redis client
+
+# redis_client = redis.Redis(**REDIS_CONFIG)
 
 
 def get_df_from_redis(key: str, redis_client: redis.Redis) -> pd.DataFrame | None:
@@ -22,6 +36,7 @@ def get_df_from_redis(key: str, redis_client: redis.Redis) -> pd.DataFrame | Non
         return pd.read_json(json_data, orient='records')
     return None
     
+df = get_df_from_redis('youglish_data', redis_client)
 
 def search_words_in_df(phrases: str | list, df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -66,17 +81,7 @@ def create_search_pattern(phrase: str) -> str:
         return r'\b' + r'\s+'.join(map(re.escape, words)) + r'\b'
     return fr'\b{re.escape(phrase)}\b'
 
-# Initialize Redis client
-REDIS_CONFIG = {
-    'host': 'redis-11993.c228.us-central1-1.gce.redns.redis-cloud.com',
-    'port': 11993,
-    'decode_responses': True,
-    'username': "default",
-    'password': "ObIEQ5XPlF8xNDac7U7yiN6gtBUFVVUp",
-}
 
-redis_client = redis.Redis(**REDIS_CONFIG)
-df = get_df_from_redis('youglish_data', redis_client)
 
 def find_id(words: str | list, dataframe: pd.DataFrame = df) -> pd.DataFrame:
     """Wrapper function for search_words_in_df."""
@@ -153,6 +158,8 @@ def add_style(df, style = None):
         if df[field].str.startswith("<span").any():
             df[f'{field}'] = stl + df[f'{field}']
     return df
+
+
 
 
 
