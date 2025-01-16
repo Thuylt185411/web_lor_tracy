@@ -240,6 +240,10 @@ def handle_youglish_tab():
                 results['word'] = results['word'].apply(clean_word)
             elif 'words' in results.columns:
                 results['words'] = results['words'].apply(clean_word)
+            if 'word' in df.columns:
+                df['word'] = df['word'].apply(clean_word)
+            elif 'words' in df.columns:
+                df['words'] = df['words'].apply(clean_word)
             
             if df is not None and not df.empty:
                 merge_col = 'word' if 'word' in results.columns else 'words'
