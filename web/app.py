@@ -107,6 +107,22 @@ def handle_youglish_tab():
     """Handle YouGlish search with multiple input methods."""
     st.header("YouGlish Search & Word Lookup")
     
+    # Add upload youglish data section
+    st.subheader("Upload YouGlish Data")
+    youglish_file = st.file_uploader(
+        "Upload YouGlish data file (CSV)",
+        type=['csv'],
+        key="youglish_data_uploader"
+    )
+    
+    if youglish_file:
+        try:
+            df_youglish = pd.read_csv(youglish_file)
+            st.success(f"Successfully loaded YouGlish data with {len(df_youglish)} entries")
+        except Exception as e:
+            st.error(f"Error loading YouGlish data: {str(e)}")
+            return
+    
     search_col, result_col = st.columns([1, 2])
     
     with search_col:
@@ -167,7 +183,7 @@ def handle_youglish_tab():
         if st.button("Search", key="search_button", disabled=not words_to_search):
             try:
                 with st.spinner('Searching...'):
-                    results = find_id(words_to_search)
+                    results = find_id(words_to_search, df_youglish)
                 
                 if not results.empty:
                     st.session_state.search_results = results

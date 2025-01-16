@@ -13,34 +13,27 @@ import streamlit as st
 #     ssl=True
 # )
 # # redis_client.ping()
-REDIS_CONFIG = {
-    'host': 'redis-11993.c228.us-central1-1.gce.redns.redis-cloud.com',
-    'port': 11993,
-    'decode_responses': True,
-    'username': "default",
-    'password': "ObIEQ5XPlF8xNDac7U7yiN6gtBUFVVUp",
-}
-redis_client = redis.Redis(**REDIS_CONFIG)
 
-print(redis_client.ping())
-def get_df_from_redis(key: str, redis_client: redis.Redis) -> pd.DataFrame | None:
-    """
-    Retrieve DataFrame from Redis by key.
+
+# print(redis_client.ping())
+# def get_df_from_redis(key: str, redis_client: redis.Redis) -> pd.DataFrame | None:
+#     """
+#     Retrieve DataFrame from Redis by key.
     
-    Args:
-        key: Redis key to retrieve data
-        redis_client: Redis client instance
+#     Args:
+#         key: Redis key to retrieve data
+#         redis_client: Redis client instance
     
-    Returns:
-        DataFrame if data exists, None otherwise
-    """
+#     Returns:
+#         DataFrame if data exists, None otherwise
+#     """
     
-    json_data = redis_client.get(key)
-    if json_data is not None:
-        return pd.read_json(json_data, orient='records')
-    return None
+#     json_data = redis_client.get(key)
+#     if json_data is not None:
+#         return pd.read_json(json_data, orient='records')
+#     return None
     
-df = get_df_from_redis('youglish_data', redis_client)
+# df = get_df_from_redis('youglish_data', redis_client)
 
 def search_words_in_df(phrases: str | list, df: pd.DataFrame) -> pd.DataFrame:
     """
