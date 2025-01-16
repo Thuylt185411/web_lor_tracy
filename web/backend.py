@@ -5,16 +5,22 @@ import streamlit as st
 
 
     # Redis Cloud connection
-redis_client = redis.Redis(
-    host='redis-11993.c228.us-central1-1.gce.redns.redis-cloud.com',
-    port=11993,
-    password=st.secrets["redis"]["REDIS_PASSWORD"],
-    decode_responses=True,
-    ssl=True
-)
-redis_client.ping()
-
-# redis_client = redis.Redis(**REDIS_CONFIG)
+# redis_client = redis.Redis(
+#     host='redis-11993.c228.us-central1-1.gce.redns.redis-cloud.com',
+#     port=11993,
+#     password=st.secrets["redis"]["REDIS_PASSWORD"],
+#     decode_responses=True,
+#     ssl=True
+# )
+# # redis_client.ping()
+REDIS_CONFIG = {
+    'host': 'redis-11993.c228.us-central1-1.gce.redns.redis-cloud.com',
+    'port': 11993,
+    'decode_responses': True,
+    'username': "default",
+    'password': "ObIEQ5XPlF8xNDac7U7yiN6gtBUFVVUp",
+}
+redis_client = redis.Redis(**REDIS_CONFIG)
 
 print(redis_client.ping())
 def get_df_from_redis(key: str, redis_client: redis.Redis) -> pd.DataFrame | None:
