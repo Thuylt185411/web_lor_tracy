@@ -35,6 +35,8 @@ import streamlit as st
     
 # df = get_df_from_redis('youglish_data', redis_client)
 
+df = pd.read_csv('.\youglish_data.csv')
+
 def search_words_in_df(phrases: str | list, df: pd.DataFrame) -> pd.DataFrame:
     """
     Search phrases in DataFrame and return one random result for each phrase.
@@ -80,8 +82,20 @@ def create_search_pattern(phrase: str) -> str:
 
 
 
-def find_id(words: str | list, dataframe: pd.DataFrame = df) -> pd.DataFrame:
-    """Wrapper function for search_words_in_df."""
+def find_id(words: str | list, dataframe: pd.DataFrame = None) -> pd.DataFrame:
+    """
+    Find IDs in the provided dataframe based on words.
+    
+    Args:
+        words: String or list of words to search
+        dataframe: DataFrame to search in
+    
+    Returns:
+        pd.DataFrame: Filtered results
+    """
+    if dataframe is None:
+        dataframe = df  # Use global df if no dataframe is provided
+    
     return search_words_in_df(words, df=dataframe)
 
 def process_txt_file(content, num_fields):
