@@ -1,16 +1,29 @@
+"""
+Streamlit application for file processing and conversion.
+Includes TXT to CSV, B1 processing, YouGlish search, and PDF tools.
+"""
+
+import io
+from typing import List, Dict, Optional
+
 import streamlit as st
 import pandas as pd
-from backend import process_txt_file, add_style, process_txt_file_B1, find_id
 import PyPDF2
-import io
+
+from backend import (
+    process_txt_file,
+    add_style,
+    process_txt_file_B1,
+    find_id,
+    clean_word,
+    convert_results_to_csv
+)
 
 def main():
     """Main function for the Streamlit application."""
     st.title("TXT to CSV/Excel Converter")
-
     tabs = st.tabs(["TXT to CSV/Excel", "B1", "YouGlish Search", "PDF Tools"])
     
-    # Khởi tạo df là None thay vì list rỗng
     df = None
 
     with tabs[0]:
@@ -122,7 +135,6 @@ def handle_youglish_tab():
     if youglish_file:
         try:
             df_youglish = pd.read_csv(youglish_file)
-            st.success(f"Successfully loaded YouGlish data with {len(df_youglish)} entries")
         except Exception as e:
             st.error(f"Error loading YouGlish data: {str(e)}")
             return
@@ -169,9 +181,13 @@ def handle_youglish_tab():
                 try:
                     df = pd.read_csv(uploaded_file)
                     if 'words' in df.columns:
+                        # Clean words before searching
+                        df['words'] = df['words'].apply(clean_word)
                         words_to_search = df['words'].dropna().tolist()
                         st.success(f"Loaded {len(words_to_search)} words from CSV")
                     elif 'word' in df.columns:
+                        # Clean words before searching
+                        df['word'] = df['word'].apply(clean_word)
                         words_to_search = df['word'].dropna().tolist()
                         st.success(f"Loaded {len(words_to_search)} words from CSV")
                     else:
@@ -187,7 +203,22 @@ def handle_youglish_tab():
         if st.button("Search", key="search_button", disabled=not words_to_search):
             try:
                 with st.spinner('Searching...'):
-                    results = find_id(words_to_search, df_youglish)  # df_youglish will be None if not uploaded
+                    progress_bar = st.progress(0)
+                    total_words = len(words_to_search)
+                    
+                    # Process words in batches of 10 for better performance
+                    batch_size = 10
+                    results = pd.DataFrame()
+                    
+                    for i in range(0, total_words, batch_size):
+                        batch = words_to_search[i:i + batch_size]
+                        batch_results = find_id(batch, df_youglish)
+                        results = pd.concat([results, batch_results])
+                        
+                        progress = min((i + batch_size) / total_words, 1.0)
+                        progress_bar.progress(progress)
+                        
+                    progress_bar.empty()
                 
                 if not results.empty:
                     st.session_state.search_results = results
@@ -204,17 +235,73 @@ def handle_youglish_tab():
         if 'search_results' in st.session_state and st.session_state.search_results is not None:
             results = st.session_state.search_results
             
-            # Only merge if using CSV upload
+            # Clean words in results DataFrame
+            if 'word' in results.columns:
+                results['word'] = results['word'].apply(clean_word)
+            elif 'words' in results.columns:
+                results['words'] = results['words'].apply(clean_word)
+            
             if df is not None and not df.empty:
                 merge_col = 'word' if 'word' in results.columns else 'words'
                 results = df.merge(results, on=merge_col, how='left')
             
-            # Display results in a dataframe
-            st.dataframe(results)
+            successful_searches = results.dropna(subset=['video_id'])
+            failed_searches = results[results['video_id'].isna()]
             
+            if merge_col != 'word':
+                failed_searches = failed_searches.rename(columns={merge_col: 'word'})
+
+            # Display success/failure counts
+            st.info(f"Successfully found videos for {len(successful_searches)} words")
+            st.warning(f"Failed to find videos for {len(failed_searches)} words")
+
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                if not results.empty:
+                    csv_all = results.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        label="Download All Results", 
+                        data=csv_all,
+                        file_name="all_results.csv",
+                        mime="text/csv"
+                    )
+            
+            with col2:
+                if not successful_searches.empty:
+                    csv_success = successful_searches.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        label="Download Successful", 
+                        data=csv_success,
+                        file_name="successful_searches.csv",
+                        mime="text/csv"
+                    )
+            
+            with col3:
+                if not failed_searches.empty:
+                    csv_failed = failed_searches.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        label="Download Failed", 
+                        data=csv_failed,
+                        file_name="failed_searches.csv",
+                        mime="text/csv"
+                    )
+            
+            
+            # Display results in a dataframe
+            # st.dataframe(results)
+            result_tabs = st.tabs(["All Results", "Successful", "Failed"])
+            
+            with result_tabs[0]:
+                st.dataframe(results)
+            with result_tabs[1]:
+                st.dataframe(successful_searches)
+            with result_tabs[2]:
+                st.dataframe(failed_searches)
+
             # Display YouTube videos for each result
             # Only show first 2 results
-            for _, row in results.head(2).iterrows():
+            for _, row in successful_searches.head(2).iterrows():
                 if pd.notna(row['video_id']):
                     st.write(f"**Word:** {row['word']}")
                     st.write(f"**Caption:** {row['caption']}")
@@ -228,24 +315,19 @@ def handle_youglish_tab():
                     st.components.v1.iframe(video_url, width=400, height=300)
                     st.markdown("---")
             
+            
+            
             # Tạo DataFrame để download
-            if st.button("Download Results as CSV"):
-                csv = convert_results_to_csv(results)
-                st.download_button(
-                    label="Click to Download", 
-                    data=csv,
-                    file_name="youglish_results.csv",
-                    mime="text/csv"
-                )
+            # if st.button("Download Results as CSV"):
+            #     csv = convert_results_to_csv(results)
+            #     st.download_button(
+            #         label="Click to Download", 
+            #         data=csv,
+            #         file_name="youglish_results.csv",
+            #         mime="text/csv"
+            #     )
 
-def convert_results_to_csv(results: pd.DataFrame) -> str:
-    """Convert results to CSV format."""
-    # Chọn và sắp xếp lại các cột cho CSV
-    csv_df = results[[
-        'word', 'video_title', 'caption', 
-        'start_second', 'end_second', 'video_id'
-    ]]
-    return csv_df.to_csv(index=False).encode('utf-8')
+
         
 def handle_pdf_tab():
     """Handle PDF processing functionality."""

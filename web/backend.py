@@ -45,6 +45,34 @@ except FileNotFoundError:
     df = pd.DataFrame()  # Create empty DataFrame if file not found
     print(f"Warning: Could not find {data_path}")
 
+def clean_word(word: str) -> str:
+    """
+    Clean and format a word string by removing HTML tags and special characters.
+    
+    Args:
+        word: Input string that may contain HTML tags and special characters
+        
+    Returns:
+        Cleaned string with HTML tags and special characters removed
+    """
+    # Define regex pattern to match:
+    # - HTML tags like <div>, </div>, <br>, </br>, <span>, </span>
+    # - Parentheses and quotation marks
+    html_and_special_chars = re.compile(r'</?(?:div|br/?|span)>|\(|\)|"')
+    
+    # Remove matched patterns and trim whitespace
+    cleaned_word = html_and_special_chars.sub('', word).strip()
+    return cleaned_word
+
+def convert_results_to_csv(results: pd.DataFrame) -> str:
+    """Convert results to CSV format."""
+    # Chọn và sắp xếp lại các cột cho CSV
+    csv_df = results[[
+        'word', 'video_title', 'caption', 
+        'start_second', 'end_second', 'video_id'
+    ]]
+    return csv_df.to_csv(index=False).encode('utf-8')
+
 
 def search_words_in_df(phrases: str | list, df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -83,10 +111,46 @@ def search_words_in_df(phrases: str | list, df: pd.DataFrame) -> pd.DataFrame:
     return pd.concat(results).reset_index(drop=True) if results else pd.DataFrame()
 
 def create_search_pattern(phrase: str) -> str:
-    """Create regex pattern for word boundary search."""
+    """Create regex pattern for word boundary search.
+    
+    This function takes a phrase and creates a regex pattern that matches the exact phrase
+    with word boundaries. It handles both single words and multi-word phrases.
+    
+    The \b in regex is a word boundary anchor that matches positions where one side is a word character 
+    (like a letter, digit, or underscore) and the other side is not a word character (like whitespace, 
+    punctuation, or start/end of string).
+    
+    For example:
+    - "cat" with \b will match "cat" in "the cat sits" but not in "category"
+    - Without \b, "cat" would match both "cat" and "category"
+    
+    Args:
+        phrase (str): The word or phrase to create a pattern for
+        
+    Returns:
+        str: A regex pattern string that will match the exact phrase with word boundaries
+        
+    Examples:
+        >>> create_search_pattern("hello")
+        '\\bhello\\b'  # Matches "hello" but not "hello123" or "ahello"
+        >>> create_search_pattern("hello world") 
+        '\\bhello\\s+world\\b'  # Matches "hello world" but not "helloworld"
+    """
+    # Split the phrase into individual words
+    # phrase = max((p.strip() for p in phrase.strip().split('/')), key=len)
     words = phrase.split()
+    
+    
+    # If phrase contains multiple words
     if len(words) > 1:
+        # Create pattern that matches words separated by whitespace
+        # \b = word boundary (matches between word char and non-word char)
+        # \s+ = one or more whitespace characters
+        # re.escape() escapes special regex characters in the words
         return r'\b' + r'\s+'.join(map(re.escape, words)) + r'\b'
+        
+    # For single words, just add word boundaries at start and end
+    # This ensures we match the whole word, not parts of larger words
     return fr'\b{re.escape(phrase)}\b'
 
 
