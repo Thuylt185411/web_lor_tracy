@@ -114,7 +114,11 @@ def handle_youglish_tab():
         type=['csv'],
         key="youglish_data_uploader"
     )
+    df = pd.DataFrame()  # Initialize empty DataFrame
+    results = pd.DataFrame()  # Initialize empty results DataFrame
     
+    
+    df_youglish = None
     if youglish_file:
         try:
             df_youglish = pd.read_csv(youglish_file)
@@ -183,7 +187,7 @@ def handle_youglish_tab():
         if st.button("Search", key="search_button", disabled=not words_to_search):
             try:
                 with st.spinner('Searching...'):
-                    results = find_id(words_to_search, df_youglish)
+                    results = find_id(words_to_search, df_youglish)  # df_youglish will be None if not uploaded
                 
                 if not results.empty:
                     st.session_state.search_results = results
@@ -199,9 +203,11 @@ def handle_youglish_tab():
     with result_col:
         if 'search_results' in st.session_state and st.session_state.search_results is not None:
             results = st.session_state.search_results
-            merge_col = 'word' if 'word' in results.columns else 'words'
-            results = df.merge(results, on=merge_col, how='left')
-
+            
+            # Only merge if using CSV upload
+            if df is not None and not df.empty:
+                merge_col = 'word' if 'word' in results.columns else 'words'
+                results = df.merge(results, on=merge_col, how='left')
             
             # Display results in a dataframe
             st.dataframe(results)
@@ -226,7 +232,7 @@ def handle_youglish_tab():
             if st.button("Download Results as CSV"):
                 csv = convert_results_to_csv(results)
                 st.download_button(
-                    label="Click to Download",
+                    label="Click to Download", 
                     data=csv,
                     file_name="youglish_results.csv",
                     mime="text/csv"

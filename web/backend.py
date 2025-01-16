@@ -2,7 +2,7 @@ import pandas as pd
 import redis
 import re
 import streamlit as st
-
+import os
 
     # Redis Cloud connection
 # redis_client = redis.Redis(
@@ -35,7 +35,16 @@ import streamlit as st
     
 # df = get_df_from_redis('youglish_data', redis_client)
 
-df = pd.read_csv('youglish_data.csv')
+current_dir = os.path.dirname(os.path.abspath(__file__))
+# Construct path to data file
+data_path = os.path.join(current_dir, 'data', 'youglish_data.csv')
+
+try:
+    df = pd.read_csv(data_path)
+except FileNotFoundError:
+    df = pd.DataFrame()  # Create empty DataFrame if file not found
+    print(f"Warning: Could not find {data_path}")
+
 
 def search_words_in_df(phrases: str | list, df: pd.DataFrame) -> pd.DataFrame:
     """
