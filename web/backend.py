@@ -243,6 +243,9 @@ def add_style(df, style = None):
             df[f'{field}'] = stl + df[f'{field}']
     return df
 
+def excel_to_srt(df):
+    print(1)
+
 
 
 
