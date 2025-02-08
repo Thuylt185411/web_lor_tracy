@@ -283,7 +283,12 @@ def handle_youglish_tab():
             if df is not None and not df.empty:
                 merge_col = 'word' if 'word' in results.columns else 'words'
                 results = df.merge(results, on=merge_col, how='left')
-            
+
+            if 'word' in df.columns and 'caption' in results.columns:
+                results['caption'] = results.apply(
+                    lambda row: row['caption'].replace(row['word'], f"<b>{row['word']}</b>") if pd.notna(
+                        row['caption']) and pd.notna(row['word']) else row['caption'], axis=1)
+
             successful_searches = results.dropna(subset=['video_id'])
             failed_searches = results[results['video_id'].isna()].drop(['video_id','video_title','start_second','end_second','caption'], axis=1)#axis=1 là cột
             
