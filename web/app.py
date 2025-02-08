@@ -435,24 +435,37 @@ def handle_pdf_tab():
 def excel_to_srt():
     st.header("excel/csv to srt")
 
-    uploaded_files = st.file_uploader(
+    uploaded_file= st.file_uploader(
         "Choose files",
         type=["xlsx", "csv"],
         key="excel_uploader",
-        accept_multiple_files=True
+        accept_multiple_files=False
     )
 
-    if uploaded_files:
-        for uploaded_file in uploaded_files:
-            srt_content = excel_to_bilingual_srt(uploaded_file)
+    if uploaded_file:
+        srt_content = excel_to_bilingual_srt(uploaded_file)
 
-            # Nút tải file về
-            st.download_button(
-                label=f"Download {uploaded_file.name}.srt",
-                data=srt_content,
-                file_name=f"{uploaded_file.name.rsplit('.', 1)[0]}.srt",
-                mime="text/plain"
-            )
+        if srt_content:
+            st.success("✅ Chuyển đổi thành công!")
+
+            # Hiển thị nội dung SRT
+            st.text_area("📄 Xem trước file SRT:", value=srt_content, height=300)
+
+            # Tạo file tạm để tải về
+            output_file = "temp/output.srt"
+            os.makedirs("temp", exist_ok=True)
+            with open(output_file, "w", encoding="utf-8") as f:
+                f.write(srt_content)
+
+            # Nút tải về file SRT
+            with open(output_file, "rb") as f:
+                st.download_button(
+                    label="⬇ Tải về SRT",
+                    data=f,
+                    file_name="subtitles.srt",
+                    mime="text/plain"
+                )
+
 
 if __name__ == "__main__":
     main()
