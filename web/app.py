@@ -442,9 +442,10 @@ def excel_to_srt():
         accept_multiple_files=False
     )
 
-    name = uploaded_file.name
+
 
     if uploaded_file:
+        name = uploaded_file.name
         srt_content = excel_to_bilingual_srt(uploaded_file)
 
         if srt_content:
