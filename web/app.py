@@ -90,45 +90,67 @@ def create_download_button(df, original_filename):
         mime="text/csv",
     )
 
+
 def handle_b1_tab():
     """Handle the B1 tab functionality."""
-    st.header("B1 File Processing")
-    
+    st.header("📂 B1 File Processing")
+
+    # File uploader
     uploaded_file = st.file_uploader(
-        "Choose TXT file",
+        "📌 Choose a TXT file",
         type=["txt"],
         key="b1_txt_uploader"
     )
+
+    # Nhập số lượng trường dữ liệu
     num_field = st.number_input(
-        "Enter number of fields (or auto)",
+        "🔢 Enter number of fields (or auto)",
         min_value=1,
-        value=8
+        value=8,
+        key="num_field_b1"
     )
-    if st.button("Process B1", key="process_b1_button"):
+
+    # Nút xử lý file
+    if st.button("🚀 Process B1", key="process_b1_button"):
         if uploaded_file is None:
-            st.warning("Please upload a TXT file before processing.")
+            st.warning("⚠ Please upload a TXT file before processing.")
             return
-            
+
         try:
-            content = uploaded_file.read().decode("utf-8")
+            # Đọc file với nhiều encoding fallback
+            content = None
+            for encoding in ["utf-8", "latin1", "utf-16"]:
+                try:
+                    content = uploaded_file.read().decode(encoding)
+                    break
+                except UnicodeDecodeError:
+                    continue
+
+            if content is None:
+                st.error("❌ Unable to decode the file. Please check encoding.")
+                return
+
+            # Xử lý file
             df = process_txt_file_B1(content, num_field)
-            
+
             if df is not None and not df.empty:
-                st.write("Processed Data:")
+                st.success("✅ File processed successfully!")
                 st.dataframe(df)
-                
-                # Tạo nút download
+
+                # Tạo file CSV để tải xuống
+                csv_data = df.to_csv(index=False).encode('utf-8')
                 st.download_button(
-                    label="Download B1 data as CSV",
-                    data=df.to_csv(index=False).encode('utf-8'),
+                    label="📥 Download CSV",
+                    data=csv_data,
                     file_name=f"B1_{uploaded_file.name.split('.')[0]}.csv",
                     mime="text/csv",
                 )
             else:
-                st.warning("No data was processed. Please check your input file.")
-                
+                st.warning("⚠ No data was processed. Please check your input file.")
+
         except Exception as e:
-            st.error(f"Error processing file: {str(e)}")
+            st.error(f"❌ Error processing file: {str(e)}")
+
 def handle_youglish_tab():
     """Handle YouGlish search with multiple input methods."""
     st.header("YouGlish Search & Word Lookup")
