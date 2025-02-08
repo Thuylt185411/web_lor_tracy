@@ -243,8 +243,95 @@ def add_style(df, style = None):
             df[f'{field}'] = stl + df[f'{field}']
     return df
 
-def excel_to_srt(df):
-    print(1)
+
+import pandas as pd
+import re
+
+
+def convert_time_to_srt_format(time_str):
+    """
+    Convert time formats like '0s', 'MM:SS', or 'HH:MM:SS' to 'HH:MM:SS,SSS'.
+    Supports milliseconds if included in the input.
+    """
+    match_seconds = re.match(r"^(\d+)s$", time_str)
+    match_milliseconds = re.match(r"^(\d+):(\d+):(\d+)\.(\d+)$", time_str)
+
+    if match_seconds:
+        seconds = int(match_seconds.group(1))
+        hours, minutes = divmod(seconds, 3600)
+        minutes, seconds = divmod(minutes, 60)
+        milliseconds = 0
+    elif match_milliseconds:
+        hours, minutes, seconds, milliseconds = map(int, match_milliseconds.groups())
+    else:
+        time_parts = list(map(int, re.split("[:.]", time_str)))
+        if len(time_parts) == 2:  # MM:SS
+            minutes, seconds = time_parts
+            hours, milliseconds = 0, 0
+        elif len(time_parts) == 3:  # HH:MM:SS
+            hours, minutes, seconds = time_parts
+            milliseconds = 0
+        elif len(time_parts) == 4:  # HH:MM:SS.mmm
+            hours, minutes, seconds, milliseconds = time_parts
+        else:
+            raise ValueError(f"Invalid time format: {time_str}")
+
+    return f"{hours:02}:{minutes:02}:{seconds:02},{milliseconds:03}"
+
+
+def excel_to_bilingual_srt(uploaded_file):
+    """
+    Xử lý file Excel/CSV và chuyển thành phụ đề SRT
+    """
+    file_name = uploaded_file.name
+    if file_name.endswith(".xlsx"):
+        data = pd.read_excel(uploaded_file)
+    elif file_name.endswith(".csv"):
+        data = pd.read_csv(uploaded_file)
+    else:
+        raise ValueError("File không đúng định dạng .xlsx hoặc .csv")
+
+    # Ensure necessary columns are present
+    required_columns = {"Time", "Subtitle", "Machine Translation"}
+    if not required_columns.issubset(data.columns):
+        raise ValueError(f"Excel file must have columns: {required_columns}")
+
+    # Clean the data
+    data = data[["Time", "Subtitle", "Machine Translation"]].dropna()
+
+    # Convert times to SRT format
+    try:
+        data["Start Time"] = data["Time"].apply(convert_time_to_srt_format)
+    except ValueError as e:
+        raise ValueError(f"Error in time conversion: {e}")
+
+    # Calculate End Times
+    duration = 2  # Default duration in seconds
+    end_times = []
+    for i in range(len(data)):
+        start_time = data["Start Time"].iloc[i]
+        if i < len(data) - 1:
+            end_time = data["Start Time"].iloc[i + 1]
+        else:
+            # Add a fixed duration for the last subtitle
+            h, m, s, ms = map(int, re.split(r"[:.,]", start_time))
+            end_seconds = (h * 3600 + m * 60 + s + duration) * 1000 + ms
+            h, remainder = divmod(end_seconds, 3600000)
+            m, remainder = divmod(remainder, 60000)
+            s, ms = divmod(remainder, 1000)
+            end_time = f"{h:02}:{m:02}:{s:02},{ms:03}"
+        end_times.append(end_time)
+
+    data["End Time"] = end_times
+
+    # Write to SRT file
+    with open(output_file, "w", encoding="utf-8") as srt_file:
+        for i, row in data.iterrows():
+            srt_file.write(f"{i + 1}\n")
+            srt_file.write(f"{row['Start Time']} --> {row['End Time']}\n")
+            srt_file.write(f"{row['Subtitle']}\n")
+            # srt_file.write(f"{row['Machine Translation']}\n\n")
+
 
 
 

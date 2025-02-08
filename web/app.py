@@ -16,13 +16,19 @@ from backend import (
     process_txt_file_B1,
     find_id,
     clean_word,
-    convert_results_to_csv
+    convert_results_to_csv,
+    excel_to_bilingual_srt
 )
 
 def main():
     """Main function for the Streamlit application."""
     st.title("TXT to CSV/Excel Converter")
-    tabs = st.tabs(["TXT to CSV/Excel", "B1", "YouGlish Search", "PDF Tools"])
+    tabs = st.tabs(["TXT to CSV/Excel",
+                    "B1",
+                    "YouGlish Search",
+                    "PDF Tools",
+                    "excel_to_srt"
+                    ])
     
     df = None
 
@@ -37,6 +43,9 @@ def main():
 
     with tabs[3]:
         handle_pdf_tab()
+
+    with tabs[4]:
+        excel_to_srt()
 
 def handle_txt_to_csv_tab():
     """Handle the TXT to CSV conversion tab."""
@@ -423,6 +432,27 @@ def handle_pdf_tab():
                     
         except Exception as e:
             st.error(f"Error processing PDFs: {str(e)}")
+def excel_to_srt():
+    st.header("excel/csv to srt")
+
+    uploaded_files = st.file_uploader(
+        "Choose files",
+        type=["xlsx", "csv"],
+        key="excel_uploader",
+        accept_multiple_files=True
+    )
+
+    if uploaded_files:
+        for uploaded_file in uploaded_files:
+            srt_content = excel_to_bilingual_srt(uploaded_file)
+
+            # Nút tải file về
+            st.download_button(
+                label=f"Download {uploaded_file.name}.srt",
+                data=srt_content,
+                file_name=f"{uploaded_file.name.rsplit('.', 1)[0]}.srt",
+                mime="text/plain"
+            )
 
 if __name__ == "__main__":
     main()
