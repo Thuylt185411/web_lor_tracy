@@ -457,7 +457,8 @@ def excel_to_srt():
             st.download_button(
                 "Download",
                 data=srt_content,
-                file_name=f"{name}.srt",
+                file_name=f"{name.split('.')[0]}.srt",
+
                 mime="application/pdf"
             )
 
