@@ -325,13 +325,14 @@ def excel_to_bilingual_srt(uploaded_file):
     data["End Time"] = end_times
 
     # Write to SRT file
-    with open(output_file, "w", encoding="utf-8") as srt_file:
-        for i, row in data.iterrows():
-            srt_file.write(f"{i + 1}\n")
-            srt_file.write(f"{row['Start Time']} --> {row['End Time']}\n")
-            srt_file.write(f"{row['Subtitle']}\n")
-            # srt_file.write(f"{row['Machine Translation']}\n\n")
+    srt_content = ""
+    for i, row in data.iterrows():
+        srt_content += f"{i + 1}\n"
+        srt_content += f"{row['Start Time']} --> {row['End Time']}\n"
+        srt_content += f"{row['Subtitle']}\n"
+        # srt_content += f"{row['Machine Translation']}\n\n"
 
+    return srt_content
 
 
 
