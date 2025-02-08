@@ -131,9 +131,9 @@ def create_search_pattern(phrase: str) -> str:
         str: A regex pattern string that will match the exact phrase with word boundaries
         
     Examples:
-        >>> create_search_pattern("hello")
+        # >>> create_search_pattern("hello")
         '\\bhello\\b'  # Matches "hello" but not "hello123" or "ahello"
-        >>> create_search_pattern("hello world") 
+        # >>> create_search_pattern("hello world")
         '\\bhello\\s+world\\b'  # Matches "hello world" but not "helloworld"
     """
     # Split the phrase into individual words
@@ -210,9 +210,17 @@ def process_txt_file_B1(content, num_fields = 10):
     for entry in entries:
         if '::' in entry[0].strip():
             entry_1 = []
-            entry_1.extend([x.strip().strip('"').replace('""', '"') for x in entry])
+            tmp = []
+            for x in entry:
+                if x.strip():
+                    tmp.append(x.strip().strip('"').replace('""', '"'))
+            entry_1.extend(tmp)
         else:
-            entry_1.extend([x.strip().strip('"') for x in entry])
+            tmp = []
+            for x in entry:
+                if x.strip():
+                    tmp.append(x.strip().strip('"').replace('""', '"'))
+            entry_1.extend(tmp)
         formatted_data.append(entry_1)
 
     # Tạo DataFrame
@@ -239,8 +247,13 @@ def add_style(df, style = None):
     if style:
         stl = style
     for field in df.columns:
-        if df[f'{field}'].str.startswith("<span class='pos'>").any():
-            df[f'{field}'] = stl + df[f'{field}']
+        # Xử lý các giá trị NaN để tránh lỗi
+        df[field] = df[field].fillna("")
+
+        # Kiểm tra xem cột có chứa HTML không
+        if df[field].astype(str).str.startswith("<span class='pos'>").any():
+            df[field] = df[field].astype(str).apply(lambda x: stl + x if x.startswith("<span class='pos'>") else x)
+
     return df
 
 
