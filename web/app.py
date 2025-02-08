@@ -442,6 +442,8 @@ def excel_to_srt():
         accept_multiple_files=False
     )
 
+    name = uploaded_file.name
+
     if uploaded_file:
         srt_content = excel_to_bilingual_srt(uploaded_file)
 
@@ -451,20 +453,13 @@ def excel_to_srt():
             # Hiển thị nội dung SRT
             st.text_area("📄 Xem trước file SRT:", value=srt_content, height=300)
 
-            # Tạo file tạm để tải về
-            output_file = "temp/output.srt"
-            os.makedirs("temp", exist_ok=True)
-            with open(output_file, "w", encoding="utf-8") as f:
-                f.write(srt_content)
-
-            # Nút tải về file SRT
-            with open(output_file, "rb") as f:
-                st.download_button(
-                    label="⬇ Tải về SRT",
-                    data=f,
-                    file_name="subtitles.srt",
-                    mime="text/plain"
-                )
+            # Tạo file tạm để tải về            # Nút tải về file SRT
+            st.download_button(
+                "Download",
+                data=srt_content,
+                file_name=f"{name}.srt",
+                mime="application/pdf"
+            )
 
 
 if __name__ == "__main__":
