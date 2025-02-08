@@ -239,7 +239,7 @@ def add_style(df, style = None):
     if style:
         stl = style
     for field in df.columns:
-        if df[field].str.startswith("<span class='pos'>").any():
+        if df[field].str.startswith("<span class='pos'>"):
             df[f'{field}'] = stl + df[f'{field}']
     return df
 
