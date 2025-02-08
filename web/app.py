@@ -99,7 +99,11 @@ def handle_b1_tab():
         type=["txt"],
         key="b1_txt_uploader"
     )
-    
+    num_field = st.number_input(
+        "Enter number of fields (or auto)",
+        min_value=1,
+        value=8
+    )
     if st.button("Process B1", key="process_b1_button"):
         if uploaded_file is None:
             st.warning("Please upload a TXT file before processing.")
@@ -107,7 +111,7 @@ def handle_b1_tab():
             
         try:
             content = uploaded_file.read().decode("utf-8")
-            df = process_txt_file_B1(content)
+            df = process_txt_file_B1(content, num_field)
             
             if df is not None and not df.empty:
                 st.write("Processed Data:")
