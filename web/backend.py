@@ -200,7 +200,7 @@ def process_txt_file(content, num_fields):
 
 
 def process_txt_file_B1(content, num_fields = 10):
-    entries = [line.strip('"').strip('"').split('\t') for line in content.split("\n") if line and not line.startswith('#')]
+    entries = [line.strip('"').strip('"').split('\t') for line in content.split("\n") if line.strip() and not line.startswith('#')]
 
     formatted_data = []
     # for entry in entries:
