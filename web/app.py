@@ -461,7 +461,7 @@ def excel_to_srt():
 
                 mime="application/pdf"
             )
-
+            st.text(srt_content)
 
 if __name__ == "__main__":
     main()
